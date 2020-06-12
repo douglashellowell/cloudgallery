@@ -77,9 +77,6 @@ resource "aws_dynamodb_table" "dynamo_bucket_registry" {
 
 # iam role
 resource "aws_iam_role" "bucket_db_access" {
-  # add  "Service": "lambda.amazonaws.com" ?
-  # 
-
   name               = "bucket_db_access"
   assume_role_policy = <<EOF
 {

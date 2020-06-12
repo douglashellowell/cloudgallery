@@ -77,13 +77,10 @@ resource "aws_dynamodb_table" "dynamo_bucket_registry" {
 
 # iam role
 resource "aws_iam_role" "bucket_db_access" {
-  # add  "Service": "lambda.amazonaws.com" ?
-  # 
-
   name               = "bucket_db_access"
   assume_role_policy = <<EOF
 {
-  "Verison": "2012-10-17",
+  "Version": "2012-10-17",
   "Statement": [
     {
       "Action": "sts:AssumeRole",
@@ -125,7 +122,7 @@ resource "aws_iam_policy" "bucket_db_access_policy" {
       "Action": ["s3:*"],
       "Resource": [
         "${aws_s3_bucket.image_bucket.arn}",
-        "${aws_s3_bucket.image_bucket.arn}/*",
+        "${aws_s3_bucket.image_bucket.arn}/*"
       ]
     },
     {
@@ -138,7 +135,7 @@ resource "aws_iam_policy" "bucket_db_access_policy" {
     },
     {
       "Effect": "Allow",
-      "Action": [labda:*],
+      "Action": ["lambda:*"],
       "Resource": [
         "${aws_lambda_function.register_image_function.arn}"
       ]
@@ -232,8 +229,34 @@ resource "aws_lambda_function" "register_image_function" {
   role = aws_iam_role.bucket_db_access.arn
   handler = "lambda.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  runtime = "nodejs6.10"
+  runtime = "nodejs12.x"
 }
+
+# # allow execution from s3 bucket
+# resource "aws_lambda_permission" "allow_bucket" {
+#   statement_id = "AllowExecutionFromS3Bucket"
+#   action = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.register_image_function.arn
+#   principal = "s3.amazonaws.com"
+#   source_arn = aws_s3_bucket.image_bucket.arn
+# }
+
+# # allow write to DyndamoDB
+# # resource "aws_lambda_permission" "allow_dynamoDB" {
+  
+# # }
+
+
+# resource "aws_s3_bucket_notification" "bucket_trigger" {
+#   bucket = aws_s3_bucket.image_bucket.id
+
+#   lambda_function {
+#     lambda_function_arn = aws_lambda_function.register_image_function.arn
+#     events = ["s3:ObjectCreated:*"]
+#   }
+
+#   depends_on = [aws_lambda_permission.allow_bucket]
+# }
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # Prev .tf config # # # # # # # # # # # # # # # # # # # # # # # # # 

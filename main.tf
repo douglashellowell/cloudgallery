@@ -11,6 +11,7 @@
 # Lambda func
 # DynamoDB
 # Permissions for those
+# cloudwatch logs
 
 # Result
 # upload to s3
@@ -78,6 +79,7 @@ resource "aws_dynamodb_table" "dynamo_bucket_registry" {
 # iam role
 resource "aws_iam_role" "bucket_db_access" {
   name               = "bucket_db_access"
+  #  needs s3?
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -100,6 +102,13 @@ resource "aws_iam_role" "bucket_db_access" {
       "Action": "sts:AssumeRole",
       "Principal": {
         "Service": "dynamodb.amazonaws.com"
+      },
+      "Effect": "Allow"
+    },
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "log.amazonaws.com"
       },
       "Effect": "Allow"
     }
@@ -139,6 +148,14 @@ resource "aws_iam_policy" "bucket_db_access_policy" {
       "Resource": [
         "${aws_lambda_function.register_image_function.arn}"
       ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup",
+                 "logs:CreateLogStream",
+                 "logs:PutLogEvents"
+      ],
+      "Resource": "*"
     }
   ]
 }
@@ -232,31 +249,31 @@ resource "aws_lambda_function" "register_image_function" {
   runtime = "nodejs12.x"
 }
 
-# # allow execution from s3 bucket
-# resource "aws_lambda_permission" "allow_bucket" {
-#   statement_id = "AllowExecutionFromS3Bucket"
-#   action = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.register_image_function.arn
-#   principal = "s3.amazonaws.com"
-#   source_arn = aws_s3_bucket.image_bucket.arn
-# }
+# allow execution from s3 bucket
+resource "aws_lambda_permission" "allow_bucket" {
+  statement_id = "AllowExecutionFromS3Bucket"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.register_image_function.arn
+  principal = "s3.amazonaws.com"
+  source_arn = aws_s3_bucket.image_bucket.arn
+}
 
-# # allow write to DyndamoDB
-# # resource "aws_lambda_permission" "allow_dynamoDB" {
+# allow write to DyndamoDB
+# resource "aws_lambda_permission" "allow_dynamoDB" {
   
-# # }
-
-
-# resource "aws_s3_bucket_notification" "bucket_trigger" {
-#   bucket = aws_s3_bucket.image_bucket.id
-
-#   lambda_function {
-#     lambda_function_arn = aws_lambda_function.register_image_function.arn
-#     events = ["s3:ObjectCreated:*"]
-#   }
-
-#   depends_on = [aws_lambda_permission.allow_bucket]
 # }
+
+
+resource "aws_s3_bucket_notification" "bucket_trigger" {
+  bucket = aws_s3_bucket.image_bucket.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.register_image_function.arn
+    events = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_lambda_permission.allow_bucket]
+}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # Prev .tf config # # # # # # # # # # # # # # # # # # # # # # # # # 

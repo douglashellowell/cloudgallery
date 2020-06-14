@@ -2,6 +2,8 @@
 
 // load sdk
 const AWS = require('aws-sdk');
+// load uuid gen
+const uuid = require('uuid')
 // set region
 AWS.config.update({ region: 'eu-west-1' });
 
@@ -9,37 +11,56 @@ AWS.config.update({ region: 'eu-west-1' });
 const s3 = new AWS.S3({ apiVersion: '2012-08-10' });
 
 // create DynamoDB service object
-const ddb = new AWS.DynamoDB({ apiVersion: '2012-08-10' });
+const ddb = new AWS.DynamoDB.DocumentClient();
 
-const ddbTable = process.env.DDBtable
+const ddbTable = process.env.DDBtable;
 
-exports.handler = async (event, context, callback) => {
-  console.log('event: ', event);
-  console.log('using ddb table: ', ddbTable);
-  
-  console.log('context: ', context);
-  s3.listBuckets((err, data) => {
-    if (err) console.log('error: ', err);
-    else console.log('buckets: ', data);
-  });
-  // guide : https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/dynamodb-example-table-read-write.html
+let id = 0;
 
-  // var params = {
-  //     TableName: 'CUSTOMER_LIST',
-  //     Item: {
-  //       'CUSTOMER_ID' : {N: '001'},
-  //       'CUSTOMER_NAME' : {S: 'Richard Roe'}
-  //     }
-  //   };
+exports.handler = async(event, context, callback) => {
+    console.log('\nevent: ', JSON.stringify(event, null, 2));
 
-  //   // Call DynamoDB to add the item to the table
-  //   ddb.putItem(params, function(err, data) {
-  //     if (err) {
-  //       console.log("Error", err);
-  //     } else {
-  //       console.log("Success", data);
-  //     }
-  //   });
+    // console.log('\nusing ddb table: ', ddbTable);
 
-  callback(null, 'wahoo!');
+    // console.log('\ncontext: ', context);
+
+    const srcKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
+    // console.log('srcKey: ', srcKey);
+
+    const srcBucket = event.Records[0].s3.bucket.name;
+    // console.log('\nsrcBucket: ', srcBucket);
+
+    const srcSize = event.Records[0].s3.object.size
+
+    //   s3.listBuckets((err, data) => {
+    //     if (err) console.log('error: ', err);
+    //     else console.log('buckets: ', data);
+    //   });
+    // guide : https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/dynamodb-example-table-read-write.html
+
+    // const uploadID = ++id
+
+    const params = {
+      TableName: 'bucket_image_registry',
+      Item: {
+        ImageTitle: srcKey,
+        ImageID: uuid.v1(),
+        Score: 0,
+        srcBucket: srcBucket,
+        srcSize: srcSize
+        }
+      }
+
+    console.log('uploading...')
+    //   // Call DynamoDB to add the item to the table
+    return ddb.put(params)
+      .promise()
+      .then(res => {
+        console.log(res)
+        callback('wahoo!')
+      }).catch(err => {
+        console.log(err)
+        callback('boo!')
+      })
+
 };

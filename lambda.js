@@ -2,6 +2,8 @@
 
 // load sdk
 const AWS = require('aws-sdk');
+// load uuid gen
+const uuid = require('uuid')
 // set region
 AWS.config.update({ region: 'eu-west-1' });
 
@@ -42,7 +44,7 @@ exports.handler = async(event, context, callback) => {
       TableName: 'bucket_image_registry',
       Item: {
         ImageTitle: srcKey,
-        ImageID: (id += 1).toString(),
+        ImageID: uuid.v1(),
         Score: 0,
         srcBucket: srcBucket,
         srcSize: srcSize
